@@ -2,8 +2,8 @@
 #include <MD_MAX72xx.h>
 
 const int motor_pin = 9;
-const int temp_pin = 1;
-const int pmeter_pin = 0;
+const int temp_pin = A1;
+const int pmeter_pin = A0;
 
 const int cs_led_pin = 11;
 const int din_led_pin = 10;
@@ -11,15 +11,6 @@ const int clk_led_pin = 13;
 
 #define ADC_VREF_mV 5000.0 // in millivolt
 #define ADC_RESOLUTION 1024.0
-
-uint16_t analog_read(uint8_t channel)
-{
-	ADMUX = (ADMUX & 0xF0) | (channel & 0x0F);
-	ADCSRA |= (1 << ADSC);
-	while (ADCSRA & (1 << ADSC))
-		;
-	return ADC;
-}
 
 Servo motor;
 
@@ -43,37 +34,39 @@ void show_number(int n)
 
 float get_temp()
 {
-	analog_read(2);
-	analog_read(temp_pin);
+	analogRead(temp_pin);
+
+	delay(200);
 
 	long sum = 0;
-	for (int i = 0; i < 100; i++) {
-		sum += analog_read(temp_pin);
+	for (int i = 0; i < 1; i++) {
+		sum += analogRead(temp_pin);
 	}
 
-	float res = (sum / 100.0) * 5.0 / 1024.0 * 100.0;
+	int val = sum;
+	float millivolt = val * (ADC_VREF_mV / ADC_RESOLUTION);
+
+	float res = millivolt / 10;
 	return res;
 }
 
 int get_dial()
 {
-	analog_read(2);
-	analog_read(pmeter_pin);
+	analogRead(pmeter_pin);
+
+	delay(200);
 
 	long sum = 0;
-	for (int i = 0; i < 100; i++) {
-		sum += analog_read(pmeter_pin);
+	for (int i = 0; i < 1; i++) {
+		sum += analogRead(pmeter_pin);
 	}
 
-	int res = map(sum / 100, 0, 1024, 50, 10);
+	int res = map(sum, 0, 1024, 50, 10);
 	return res;
 }
 
 void setup()
 {
-	ADMUX = (1 << REFS0);
-	ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
-
 	Serial.begin(9600);
 	motor.attach(motor_pin);
 
@@ -85,7 +78,7 @@ void setup()
 long last_tick = 0;
 void loop()
 {
-	if (millis() - last_tick < 200)
+	if (millis() - last_tick < 500)
 		return;
 	last_tick = millis();
 
@@ -101,6 +94,6 @@ void loop()
 
 	Serial.print("Temperature: ");
 	Serial.print(temp);
-	Serial.print(" C | Dial Target: ");
+	Serial.print(" C | Dial: ");
 	Serial.println(dial);
 }
